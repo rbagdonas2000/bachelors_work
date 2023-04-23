@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>NodeManager</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>toolbox.builder.TLAParserBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>toolbox.natures.TLANature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>Aggregator.tla</name>
+			<type>1</type>
+			<location>D:/bakalaurinis/bachelors_work/take from the pool/Aggregator.tla</location>
+		</link>
+		<link>
+			<name>NodeManager.tla</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/NodeManager.tla</locationURI>
+		</link>
+	</linkedResources>
+</projectDescription>
