@@ -21,4 +21,7 @@ Next == \/ /\ Channel!Receive
         \/ \*/\ Print(<<"preparing to aggregate">>, TRUE)
            /\ NodeManagerIns!Next
            /\ UNCHANGED <<start_pt, q_buffer>>
+        \/ /\ end_pt /= NULL
+           /\ Print(<<end_pt>>, TRUE)
+           /\ UNCHANGED <<start_pt, manager, q_buffer>>
 =============================================================================

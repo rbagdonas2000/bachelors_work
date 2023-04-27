@@ -22,11 +22,13 @@ SetCorrelationId(cid) == /\ correlationId = NULL
                          
 
 AddToSource(content) == /\ src = NULL
+                        /\ Print(<<"preparing to aggregate", GetCorrelationId, src, dst, time, buffer>>, TRUE)
                         /\ src' = content
                         /\ UNCHANGED <<dst, time, buffer, correlationId>>
         
 ProcessMessage == /\ src /= NULL
                   /\ buffer' = Append(buffer, src)
+                  /\ Print(<<"preparing to aggregate", GetCorrelationId, src, dst, time, buffer>>, TRUE)
                   /\ src' = NULL
                   /\ time' = time + 1
                   /\ UNCHANGED <<dst, correlationId>>
