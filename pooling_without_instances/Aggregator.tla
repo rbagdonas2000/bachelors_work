@@ -4,6 +4,7 @@ CONSTANTS NULL, TimeOut
 VARIABLES aggs, dst
         
 ProcessMessage(id, item) == 
+    /\ aggs[id].Time < TimeOut
     /\ aggs' = [a \in DOMAIN aggs |-> 
                 CASE aggs[a].Id = id -> [Id |-> id, 
                                         Buffer |-> Append(aggs[a].Buffer, item.content), 
@@ -32,8 +33,7 @@ LOCAL IncrementTime(id) ==
                 []OTHER -> aggs[a]]
     /\ UNCHANGED dst
 
-Aggregate(id) == /\ IF aggs[id].Time = TimeOut
+Aggregate(id) == /\ IF aggs[id].Time >= TimeOut
                     THEN Send(id)
                     ELSE IncrementTime(id)
-                \*  /\ Print(<<aggs[id].Time>>, TRUE)
 =============================================================================
