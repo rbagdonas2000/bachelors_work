@@ -23,9 +23,9 @@ Init == /\ start_pt = NULL
         /\ versionCounter = 1
         /\ pool = {}
         /\ aggs = [a \in pool |-> [Id |-> a, 
-                                              Buffer |-> <<>>, 
-                                              Time |-> 0,
-                                              CorrelationId |-> NULL]]
+                                   Buffer |-> <<>>, 
+                                   Time |-> 0,
+                                   CorrelationId |-> NULL]]
 
 CheckIfDone == 
     /\ end_pt = NULL
@@ -63,6 +63,9 @@ Next == \/ /\ Channel!Send
         \/ CheckIfDone
         
 GuaranteedDelivery == <>(end_pt /= NULL)
+
+ResourcesAreCleared == LET id == versionCounter
+                       IN id \in DOMAIN aggs => <>(id \notin DOMAIN aggs)
 
 Spec == Init /\ [][Next]_Vars /\ WF_Vars(Next)
 -----------------------------------------------------------------------------
