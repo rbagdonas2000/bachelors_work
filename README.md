@@ -4,5 +4,5 @@
 
 Specifications to do:
 1. Take from pool
-2. Create on the go
-3. Resharding
+2. Create on the go and destroy after
+3. Consistent hashing
