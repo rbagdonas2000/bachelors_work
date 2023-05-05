@@ -1,5 +1,4 @@
 ------------------------ MODULE PointToPointChannel ------------------------
-EXTENDS Naturals
 CONSTANTS NULL
 VARIABLE src, dst
 

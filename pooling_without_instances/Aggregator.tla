@@ -1,5 +1,5 @@
 ----------------------------- MODULE Aggregator -----------------------------
-EXTENDS Naturals, Sequences, TLC
+EXTENDS Naturals, Sequences, FiniteSets
 CONSTANTS NULL, TimeOut
 VARIABLES aggs, dst
         
@@ -13,7 +13,7 @@ ProcessMessage(id, item) ==
                 []OTHER -> aggs[a]]
     /\ UNCHANGED dst
 
-Send(id) == 
+LOCAL Send(id) == 
     /\ Len(aggs[id].Buffer) > 0
     /\ dst = NULL
     /\ dst' = aggs[id].Buffer
@@ -33,7 +33,11 @@ LOCAL IncrementTime(id) ==
                 []OTHER -> aggs[a]]
     /\ UNCHANGED dst
 
-Aggregate(id) == /\ IF aggs[id].Time >= TimeOut
-                    THEN Send(id)
-                    ELSE IncrementTime(id)
+LOCAL AggregateInner(id) == IF aggs[id].Time >= TimeOut
+                            THEN Send(id)
+                            ELSE IncrementTime(id)
+                           
+                    
+Aggregate == /\ \E AggId \in DOMAIN aggs : Len(aggs[AggId].Buffer) > 0
+             /\ AggregateInner(CHOOSE a \in DOMAIN aggs : Len(aggs[a].Buffer) > 0)
 =============================================================================
