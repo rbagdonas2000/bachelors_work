@@ -39,6 +39,18 @@ ClearEnd ==
     /\ end_pt /= NULL
     /\ end_pt' = NULL
     /\ UNCHANGED <<start_pt, manager, aggs, msgs, pool, versionCounter>>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 TypeOK == 
     /\ start_pt \in MessageRecord \/ start_pt = NULL
@@ -50,7 +62,8 @@ TypeOK ==
     /\ \A a_id \in DOMAIN aggs : /\ aggs[a_id].Id \in pool
                                  /\ aggs[a_id].Time \in 0..TimeOut
                                  /\ \/ aggs[a_id].Buffer = <<>> 
-                                    \/ \A i \in 1..Len(aggs[a_id].Buffer) : aggs[a_id].Buffer[i] \in STRING
+                                    \/ \A i \in 1..Len(aggs[a_id].Buffer) 
+                                                : aggs[a_id].Buffer[i] \in STRING
                                  /\ \/ aggs[a_id].CorrelationId = NULL 
                                     \/ aggs[a_id].CorrelationId \in STRING
                                      
