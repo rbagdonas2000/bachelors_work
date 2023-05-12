@@ -1,43 +1,57 @@
 ----------------------------- MODULE HashRing -----------------------------
-EXTENDS Naturals, Sequences, TLC, Hashing, FiniteSets
-CONSTANTS NULL, NumOfMessages, MaxInstances, Key, Min, Max
-VARIABLES dst, ring, src, pool
+EXTENDS Naturals, Sequences, TLC, FiniteSets
+CONSTANTS NULL, Key, Min, Max
+VARIABLES dst, src, nodes, aggs, node_ids
 
 Aggregators == INSTANCE Aggregator
+Hash == INSTANCE Hashing
 
-AddToRing(item) ==
-    /\ item \notin ring
-    /\ ring' = ring \union {item}
+\* <<[Id |-> 1, Hash |-> 3],
+\* [Id |-> 2, Hash |-> 39],
+\* [Id |-> 3, Hash |-> 75]>>
+
+LOCAL IsBetween(lower, upper, hash) ==
+LET wrapsOver == upper < lower
+    aboveLower == hash >= lower
+    belowUpper == upper >= hash
+IN  IF wrapsOver
+    THEN aboveLower \/ belowUpper
+    ELSE aboveLower /\ belowUpper
+
+LOCAL FindNodeBefore(node_num, hash) ==
+IF node_num = Cardinality(node_ids) \*Len(nodes) 
+    THEN IsBetween(nodes[node_num], nodes[1], hash)
+    ELSE IsBetween(nodes[node_num], nodes[node_num+1], hash)
+
+LOCAL FindNodes(hash) ==
+LET nodeBefore == CHOOSE i \in 1..Cardinality(node_ids) : FindNodeBefore(i, hash)
+IN IF nodeBefore = Cardinality(node_ids)
+    THEN <<1, 2>> 
+    ELSE IF nodeBefore = Cardinality(node_ids) - 1
+            THEN <<Cardinality(node_ids), 1>>
+            ELSE <<nodeBefore+1, nodeBefore+2>>
+
+
+LOCAL AddToRing(hash, item) == 
+LET processingNodes == FindNodes(hash)
+IN LET primaryNode == processingNodes[1]
+       secondaryNode == processingNodes[2]
+   IN /\ Aggregators!AddPrimaryMessage(aggs[primaryNode].Id, <<hash, item>>)
+      /\ Aggregators!AddSecondaryMessage(aggs[secondaryNode].Id, <<hash, item>>)
+
 
 AddMessage == 
     /\ src /= NULL
     /\ src.correlationId /= NULL
     /\ src.content /= NULL
-    /\ Cardinality(pool) < MaxInstances
-    /\ LET hash == GetHashCode(src.correlationId, Key, Min, Max)
-       IN AddToRing(<<hash, src>>)
+    /\ LET hash == Hash!GetHashCode(src.correlationId, Key, Min, Max)
+       IN AddToRing(hash, src)
+    /\ src' = NULL
 
-Check == 
-    /\ \E rec \in ring : rec[2].isFinal = TRUE
-    /\ LET x == (CHOOSE rec \in ring : rec[2].isFinal = TRUE)[1]
-         IN LET set == \A r \in ring : r[1] = x 
-            IN /\ Aggregators!Aggregate(x, set)
-               /\ RemoveFromRing(set)
-               /\ UNCHANGED <<src, pool>>
-
+Next ==
+\/ /\ AddMessage
+   /\ UNCHANGED <<dst, nodes, node_ids>>
+\/ /\ Aggregators!Check
+   /\ /\ UNCHANGED <<src, nodes, node_ids>>
         
 =============================================================================
-\* 1. Input the value to be assigned, let's call it X
-\* 2. Calculate the absolute difference between X and each node's value: 
-\*        A_diff = abs(X - 100)
-\*        B_diff = abs(X - 34)
-\*        C_diff = abs(X - 67)
-\* 3. Find the minimum difference among the three:
-\*        min_diff = min(A_diff, B_diff, C_diff)
-\* 4. Assign X to the node with the closest higher value:
-\*        if min_diff == A_diff:
-\*              Assign X to A
-\*        else if min_diff == B_diff:
-\*              Assign X to B
-\*        else:
-\*              Assign X to C
