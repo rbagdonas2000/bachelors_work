@@ -1,5 +1,5 @@
 -------------------------------- MODULE SystemSpec --------------------------------
-EXTENDS Naturals, Sequences, SystemSpecMC
+EXTENDS Naturals, Sequences, SystemSpecMC, Hashing, TLC
 CONSTANTS Key, Min, Max, NULL, NumOfInitialNodes
 VARIABLES start_pt, ring, end_pt, aggs, msgs, nodes, node_ids
 
@@ -14,7 +14,7 @@ PutMessages ==
 
 Channel == INSTANCE PointToPointChannel WITH src <- start_pt, dst <- ring
 
-NodeManagerIns == INSTANCE HashRing WITH src <- ring, dst <- end_pt
+Ring == INSTANCE HashRing WITH src <- ring, dst <- end_pt
 
 Init == /\ start_pt = NULL
         /\ ring = NULL
@@ -37,16 +37,18 @@ CheckIfDone ==
     /\ \A a \in DOMAIN aggs : (aggs[a].PrimaryMsgs = {} /\ aggs[a].SecondaryMsgs = {})
     /\ ring = NULL
     /\ Len(msgs) = 0
+    /\ PrintT(aggs)
     /\ UNCHANGED Vars
 
 ClearEndPt == 
     /\ end_pt /= NULL
+    /\ PrintT(end_pt)
     /\ end_pt' = NULL
     /\ UNCHANGED <<start_pt, ring, aggs, msgs, nodes, node_ids>>
                                      
 Next == \/ /\ Channel!Send
            /\ UNCHANGED <<end_pt, aggs, msgs, nodes, node_ids>>
-        \/ /\ NodeManagerIns!Next
+        \/ /\ Ring!Next
            /\ UNCHANGED <<start_pt, msgs, nodes, node_ids>>
         \/ PutMessages
         \/ ClearEndPt

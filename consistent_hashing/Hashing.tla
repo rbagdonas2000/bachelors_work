@@ -1,6 +1,5 @@
 ----------------------------- MODULE Hashing -----------------------------
-EXTENDS Integers
-CONSTANTS Min, Max
+EXTENDS Naturals
 
-GetHashCode(val, key, min, max) == CHOOSE n \in Min..Max : TRUE
+GetHashCode(input, secret, min, max) == CHOOSE n \in min..max : TRUE
 =============================================================================

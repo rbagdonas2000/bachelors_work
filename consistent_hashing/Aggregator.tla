@@ -8,43 +8,39 @@ VARIABLES dst, aggs
 \* NodeBefore: STRING,
 \* PrimaryMsgs: {<<hash, msg>>}, 
 \* SecondaryMsgs: {<<hash, msg>>}]
-        
-AddPrimaryMessage(id, hash_item) ==
-/\ aggs' = [a \in DOMAIN aggs |->
-            CASE aggs[a].Id = id -> [aggs[a] EXCEPT !.PrimaryMsgs = @ \cup {hash_item}]
-            []OTHER -> aggs[a]]
+
+AddMessage(primaryId, secondaryId, hash_item) ==
+/\ aggs' = [ aggs EXCEPT ![primaryId].PrimaryMsgs = @ \cup {hash_item[2]},
+                         ![secondaryId].SecondaryMsgs = @ \cup {hash_item[2]} ]
 /\ UNCHANGED dst
 
-AddSecondaryMessage(id, hash_item) ==
-/\ aggs' = [a \in DOMAIN aggs |->
-            CASE aggs[a].Id = id -> [aggs[a] EXCEPT !.SecondaryMsgs = @ \cup {hash_item}]
-            []OTHER -> aggs[a]]
-/\ UNCHANGED dst
+\* LOCAL AggregateAndSend(correlationId, nodeId) ==
+\* LET \*finalMessage == <<>>
+\*     msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg[2].correlationId = correlationId }
+\* IN  \*/\ \A m \in msgs : finalMessage' = Append(finalMessage, m[2].content)
+\*     /\ dst' = msgs
 
-LOCAL AggregateAndSend(correlationId, nodeId) ==
-LET finalMessage == <<>>
-    msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg[2].correlationId = correlationId }
-IN  /\ \A m \in msgs : finalMessage' = Append(finalMessage, m[2].content)
-    /\ dst' = finalMessage
+\* LOCAL AggregateAndSend(c_id, nodeId) ==
+\* \*/\ PrintT({ msg \in aggs[nodeId].PrimaryMsgs : msg.correlationId = c_id})
+\* /\ LET msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg.correlationId = c_id }
+\*     IN  /\ dst' = \*<<c_id, "Message aggregated">>
+\*         \*/\ PrintT(msgs)
 
-LOCAL ClearPrimaryNode(correlationId, nodeId) ==
-LET msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg[2].correlationId = correlationId }
-IN  aggs' = [a \in DOMAIN aggs |->
-             CASE aggs[a].Id = nodeId -> [aggs[a] EXCEPT !.PrimaryMsgs = @ \ msgs]
-             []OTHER -> aggs[a]]
+LOCAL AggregateAndSend(c_id, nodeId) ==
+    dst' = { msg \in aggs[nodeId].PrimaryMsgs : msg.correlationId = c_id }
 
-LOCAL ClearSecondaryNode(correlationId, mainNodeId) ==
-LET nodeId == CHOOSE n \in DOMAIN aggs : aggs[n].NodeBefore = mainNodeId
-IN  LET msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg[2].correlationId = correlationId }
-    IN  aggs' = [a \in DOMAIN aggs |->
-                CASE aggs[a].Id = nodeId -> [aggs[a] EXCEPT !.SecondaryMsgs = @ \ msgs]
-                []OTHER -> aggs[a]]
+ClearNodesFromMessages(correlationId, p_id) ==
+LET s_id == CHOOSE n \in DOMAIN aggs : aggs[n].NodeBefore = p_id
+IN  LET msgs1 == { msg \in aggs[p_id].PrimaryMsgs : msg.correlationId = correlationId }
+        msgs2 == { msg \in aggs[s_id].SecondaryMsgs : msg.correlationId = correlationId }
+    IN  aggs' = 
+            [ aggs EXCEPT ![p_id].PrimaryMsgs = @ \ msgs1,
+                          ![s_id].SecondaryMsgs = @ \ msgs2 ]
 
 Check ==
-/\ \E id \in DOMAIN aggs : \E msg \in aggs[id].PrimaryMsgs : msg[2].isFinal
-/\ LET AggId == CHOOSE id \in DOMAIN aggs : \E msg \in aggs[id].PrimaryMsgs : msg[2].isFinal
-   IN LET CorrId == (CHOOSE msg \in aggs[AggId].PrimaryMsgs : msg[2].isFinal).correlationId
-      IN /\ AggregateAndSend(CorrId, AggId)
-         /\ ClearPrimaryNode(CorrId, AggId)
-         /\ ClearSecondaryNode(CorrId, AggId)
+/\ \E id \in DOMAIN aggs : \E msg \in aggs[id].PrimaryMsgs : msg.isFinal
+/\ LET AggId == CHOOSE id \in DOMAIN aggs : \E msg \in aggs[id].PrimaryMsgs : msg.isFinal
+   IN LET CorrId == (CHOOSE msg \in aggs[AggId].PrimaryMsgs : msg.isFinal).correlationId
+      IN  /\ AggregateAndSend(CorrId, AggId)
+          /\ ClearNodesFromMessages(CorrId, AggId)
 =============================================================================
