@@ -45,6 +45,7 @@ ClearEndPt ==
     /\ PrintT(end_pt)
     /\ end_pt' = NULL
     /\ UNCHANGED <<start_pt, ring, aggs, msgs, nodes, node_ids>>
+    
                                      
 Next == \/ /\ Channel!Send
            /\ UNCHANGED <<end_pt, aggs, msgs, nodes, node_ids>>

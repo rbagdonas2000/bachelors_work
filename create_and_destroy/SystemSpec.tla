@@ -39,18 +39,6 @@ ClearEnd ==
     /\ end_pt /= NULL
     /\ end_pt' = NULL
     /\ UNCHANGED <<start_pt, manager, aggs, msgs, pool, versionCounter>>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
 TypeOK == 
     /\ start_pt \in MessageRecord \/ start_pt = NULL

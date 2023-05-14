@@ -14,18 +14,6 @@ AddMessage(primaryId, secondaryId, hash_item) ==
                          ![secondaryId].SecondaryMsgs = @ \cup {hash_item[2]} ]
 /\ UNCHANGED dst
 
-\* LOCAL AggregateAndSend(correlationId, nodeId) ==
-\* LET \*finalMessage == <<>>
-\*     msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg[2].correlationId = correlationId }
-\* IN  \*/\ \A m \in msgs : finalMessage' = Append(finalMessage, m[2].content)
-\*     /\ dst' = msgs
-
-\* LOCAL AggregateAndSend(c_id, nodeId) ==
-\* \*/\ PrintT({ msg \in aggs[nodeId].PrimaryMsgs : msg.correlationId = c_id})
-\* /\ LET msgs == { msg \in aggs[nodeId].PrimaryMsgs : msg.correlationId = c_id }
-\*     IN  /\ dst' = \*<<c_id, "Message aggregated">>
-\*         \*/\ PrintT(msgs)
-
 LOCAL AggregateAndSend(c_id, nodeId) ==
     dst' = { msg \in aggs[nodeId].PrimaryMsgs : msg.correlationId = c_id }
 
