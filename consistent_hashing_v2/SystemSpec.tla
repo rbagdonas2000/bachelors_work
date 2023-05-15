@@ -1,20 +1,20 @@
 -------------------------------- MODULE SystemSpec --------------------------------
 EXTENDS Naturals, Sequences, SystemSpecMC, Hashing, TLC, FiniteSets, Sorting
 CONSTANTS Key, Min, Max, NULL, NumOfInitialNodes, start_pt, end_pt, 
-MsgCountWhenToTurnOffNode, MaxQueueSize
-VARIABLES aggs, msgs, nodes, node_ids, endpts, turnedOff
+CountWhenToAddRemoveNode, MaxQueueSize, randomizeHashBy
+VARIABLES aggs, msgs, nodes, node_ids, endpts, turnedOff, turnedOn, nodeVersion
 
-Vars == <<aggs, msgs, nodes, node_ids, endpts, turnedOff>>
+Vars == <<aggs, msgs, nodes, node_ids, endpts, turnedOff, turnedOn, nodeVersion>>
 
 PutMessages == 
     /\ endpts[start_pt] = NULL
     /\ Len(msgs) > 0
     /\ endpts' = [ endpts EXCEPT ![start_pt] = Head(msgs) ]
     /\ msgs' = Tail(msgs)
-    /\ UNCHANGED <<aggs, nodes, node_ids, turnedOff>>
+    /\ UNCHANGED <<aggs, nodes, node_ids, turnedOff, turnedOn, nodeVersion>>
 
 MessageChannel == INSTANCE Channel WITH src <- start_pt
-Aggregators == INSTANCE Aggregator WITH dst <- end_pt
+Aggregators == INSTANCE Aggregator WITH dst <- end_pt, nodeVersion <- nodeVersion
 
 Init == 
 /\ msgs = Msgs
@@ -32,26 +32,39 @@ Init ==
                 CASE pt \in 1..NumOfInitialNodes -> <<>>
                 []OTHER -> NULL]
 /\ turnedOff = FALSE
+/\ turnedOn = FALSE
+/\ nodeVersion = NumOfInitialNodes + 1
 
 CheckIfDone == 
     /\ endpts[end_pt] = NULL
     /\ endpts[start_pt] = NULL
     /\ \A a \in DOMAIN aggs : (aggs[a].PrimaryMsgs = {} /\ aggs[a].SecondaryMsgs = {})
     /\ Len(msgs) = 0
-    /\ PrintT("done")
     /\ UNCHANGED Vars
 
 ClearEndPt == 
     /\ endpts[end_pt] /= NULL
     /\ endpts' = [ endpts EXCEPT ![end_pt] = NULL]
-    /\ UNCHANGED <<aggs, msgs, nodes, node_ids, turnedOff>>
+    /\ UNCHANGED <<aggs, msgs, nodes, node_ids, turnedOff, turnedOn, nodeVersion>>
 
 TurnOffNode == 
 /\ turnedOff = FALSE
-/\ Len(msgs) < MsgCountWhenToTurnOffNode
+/\ Len(msgs) < CountWhenToAddRemoveNode
 /\ \E aggId \in DOMAIN aggs : Cardinality(aggs[aggId].PrimaryMsgs) > 0
 /\ Aggregators!NotifyTurnedOff(CHOOSE aggId \in DOMAIN aggs : Cardinality(aggs[aggId].PrimaryMsgs) > 0)
 /\ turnedOff' = TRUE
+/\ UNCHANGED <<turnedOn, msgs, nodeVersion>>
+
+TurnOnNode ==
+/\ turnedOn = FALSE
+/\ Len(msgs) < CountWhenToAddRemoveNode
+/\ \E aggId \in DOMAIN aggs : Cardinality(aggs[aggId].PrimaryMsgs) > 0 
+                           \/ Cardinality(aggs[aggId].SecondaryMsgs) > 0
+/\ LET id == CHOOSE aggId \in DOMAIN aggs : Cardinality(aggs[aggId].PrimaryMsgs) > 0 
+                                         \/ Cardinality(aggs[aggId].SecondaryMsgs) > 0
+   IN  Aggregators!AddNode(nodes[id] - randomizeHashBy)
+/\ turnedOn' = TRUE
+/\ UNCHANGED <<turnedOff, msgs>>
 
 TypeOK == 
 /\ endpts[start_pt] \in MessageRecord \cup {NULL}
@@ -67,12 +80,12 @@ TypeOK ==
         /\ aggs[id].PrimaryMsgs \subseteq MessageRecord
         /\ aggs[id].SecondaryMsgs \subseteq MessageRecord
 
-Next == \/ /\ TurnOffNode
-           /\ UNCHANGED msgs
+Next == \/ TurnOffNode
+        \/ TurnOnNode
         \/ /\ MessageChannel!Send(CHOOSE aggId \in node_ids : Len(endpts[aggId]) < MaxQueueSize)
-           /\ UNCHANGED <<aggs, msgs, nodes, node_ids, turnedOff>>
+           /\ UNCHANGED <<aggs, msgs, nodes, node_ids, turnedOff, turnedOn, nodeVersion>>
         \/ /\ Aggregators!Check
-           /\ UNCHANGED <<nodes, node_ids, msgs, turnedOff>>
+           /\ UNCHANGED <<nodes, node_ids, msgs, turnedOff, turnedOn, nodeVersion>>
         \/ PutMessages
         \/ ClearEndPt
         \/ CheckIfDone
