@@ -3,13 +3,16 @@ EXTENDS Naturals, Sequences, TLC, Hashing, Sorting
 CONSTANTS NULL, Key, Min, Max, dst, MaxQueueSize
 VARIABLES aggs, nodes, node_ids, endpts, nodeVersion
 
+LOCAL FindNextNode(nodeBefore) == 
+CHOOSE i \in DOMAIN aggs : aggs[i].NodeBefore = nodeBefore
+
 LOCAL AddMessage(primaryId, secondaryId, hash_item) ==
 /\ aggs' = [ aggs EXCEPT ![primaryId].PrimaryMsgs = @ \cup {hash_item[2]},
                          ![secondaryId].SecondaryMsgs = @ \cup {hash_item[2]} ]
 /\ UNCHANGED <<nodes, node_ids, nodeVersion>>
 
 LOCAL ClearNodesFromMessages(correlationId, p_id) ==
-LET s_id == CHOOSE n \in DOMAIN aggs : aggs[n].NodeBefore = p_id
+LET s_id == FindNextNode(p_id)
 IN  LET msgs1 == { msg \in aggs[p_id].PrimaryMsgs : msg.correlationId = correlationId }
         msgs2 == { msg \in aggs[s_id].SecondaryMsgs : msg.correlationId = correlationId }
     IN  aggs' = 
@@ -28,9 +31,6 @@ IN  IF wrapsOver
     THEN aboveLower \/ belowUpper
     ELSE aboveLower /\ belowUpper
 
-LOCAL FindNextNode(nodeBefore) == 
-CHOOSE i \in DOMAIN aggs : aggs[i].NodeBefore = nodeBefore
-
 LOCAL FindNodeBefore(node_num, hash) ==
     IsBetween(nodes[node_num], nodes[FindNextNode(node_num)], hash)
 
@@ -42,8 +42,10 @@ IN  LET primaryNode == FindNextNode(nodeBefore)
 
 LOCAL TakeFromEndpoint == 
 LET point == 
-IF \E agg \in DOMAIN endpts : agg \in node_ids /\ Len(endpts[agg]) > 0 /\ Head(endpts[agg]).isFinal = FALSE
-THEN CHOOSE agg \in DOMAIN endpts : agg \in node_ids /\ Len(endpts[agg]) > 0 /\ Head(endpts[agg]).isFinal = FALSE
+IF \E agg \in DOMAIN endpts : agg \in node_ids /\ Len(endpts[agg]) > 0 
+                                    /\ Head(endpts[agg]).isFinal = FALSE
+THEN CHOOSE agg \in DOMAIN endpts : agg \in node_ids /\ Len(endpts[agg]) > 0 
+                                    /\ Head(endpts[agg]).isFinal = FALSE
 ELSE CHOOSE agg \in DOMAIN endpts : agg \in node_ids /\ Len(endpts[agg]) > 0               
 IN  /\ Head(endpts[point]) /= NULL
     /\ LET msg == Head(endpts[point])
@@ -68,8 +70,8 @@ NotifyTurnedOff(n_id) ==
 /\ IF endpts[n_id] = <<>>
     THEN endpts' = [e \in DOMAIN endpts \ {n_id} |-> endpts[e]]
     ELSE endpts' = [e \in DOMAIN endpts \ {n_id} |-> 
-                    CASE e = CHOOSE i \in DOMAIN endpts \ {n_id} : 
-                                    i \in Nat /\ Len(endpts[i]) < MaxQueueSize -> SortCustomRecords(endpts[e] \o endpts[n_id])[1]
+            CASE e = CHOOSE i \in DOMAIN endpts \ {n_id} : 
+            i \in Nat /\ Len(endpts[i]) < MaxQueueSize -> SortCustomRecords(endpts[e] \o endpts[n_id])[1]
                     []OTHER -> endpts[e]]
 /\ LET newPrimary == FindNextNode(n_id)
    IN  aggs' = [a \in DOMAIN aggs \ {n_id} |->
@@ -83,18 +85,20 @@ NotifyTurnedOff(n_id) ==
 AddNode(hash) ==
 LET nodeBefore == CHOOSE i \in node_ids : FindNodeBefore(i, hash)
 IN  LET nodeInFront == FindNextNode(nodeBefore)
-    IN  LET primaryMsgs == { msg \in aggs[nodeInFront].PrimaryMsgs : GetHashCode(msg.correlationId, Key, Min, Max) <= hash }
+    IN  LET primaryMsgs == { msg \in aggs[nodeInFront].PrimaryMsgs : 
+                    GetHashCode(msg.correlationId, Key, Min, Max) <= hash }
             secondaryMsgs == aggs[nodeInFront].SecondaryMsgs
         IN  /\ aggs' = [a \in DOMAIN aggs \cup {nodeVersion} |-> 
                         CASE a = nodeVersion -> [Id |-> nodeVersion,
-                                                    Hash |-> hash,
-                                                    NodeBefore |-> nodeBefore,
-                                                    PrimaryMsgs |-> primaryMsgs,
-                                                    SecondaryMsgs |-> secondaryMsgs]
+                                                Hash |-> hash,
+                                                NodeBefore |-> nodeBefore,
+                                                PrimaryMsgs |-> primaryMsgs,
+                                                SecondaryMsgs |-> secondaryMsgs]
                         []a = nodeInFront -> [aggs[a] EXCEPT !.NodeBefore = nodeVersion,
                                                              !.PrimaryMsgs = @ \ primaryMsgs,
-                                                             !.SecondaryMsgs = {}]
-                        []a = FindNextNode(nodeInFront) -> [aggs[a] EXCEPT !.SecondaryMsgs = @ \ primaryMsgs]
+                                                             !.SecondaryMsgs = primaryMsgs]
+                        []a = FindNextNode(nodeInFront) -> 
+                                    [aggs[a] EXCEPT !.SecondaryMsgs = @ \ primaryMsgs]
                         []OTHER -> aggs[a]]
             /\ nodes' = [n \in DOMAIN nodes \cup {nodeVersion} |-> 
                             CASE n = nodeVersion -> hash
@@ -105,6 +109,9 @@ IN  LET nodeInFront == FindNextNode(nodeBefore)
                             []OTHER -> endpts[e]]
             /\ nodeVersion' = nodeVersion + 1
 =============================================================================
+
+
+
 \* [Id: Nat, 
 \* Hash: Nat,  
 \* NodeBefore: node_ids,
