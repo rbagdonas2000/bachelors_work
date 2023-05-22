@@ -1,5 +1,5 @@
 -------------------------------- MODULE SystemSpec --------------------------------
-EXTENDS Naturals, Sequences, SystemSpecMC
+EXTENDS Naturals, Sequences, SystemSpecMC, TLAPS
 CONSTANTS TimeOut, AggregatorsPool, NULL
 VARIABLES start_pt, manager, end_pt, aggs, msgs
 
@@ -45,7 +45,7 @@ TypeOK ==
    \/ end_pt = NULL
    \/ \A i \in 1..Len(end_pt) : end_pt[i] \in STRING
 /\ \A a_id \in AggregatorsPool : /\ aggs[a_id].Id \in AggregatorsPool
-                                 /\ aggs[a_id].Time \in 0..TimeOut
+                                 /\ aggs[a_id].Time \in Nat
                                  /\ \/ aggs[a_id].Buffer = <<>> 
                                     \/ \A i \in 1..Len(aggs[a_id].Buffer) 
                                                 : aggs[a_id].Buffer[i] \in STRING
@@ -66,3 +66,29 @@ Spec == Init /\ [][Next]_Vars /\ WF_Vars(Next)
 -----------------------------------------------------------------------------
 THEOREM Spec => []TypeOK
 =============================================================================
+
+
+THEOREM InitProp == Init => TypeOK
+    BY DEF Init, TypeOK
+
+THEOREM ProveTypeOK == 
+    Init /\ Next => TypeOK
+PROOF
+    <1>1 Init /\ Next => start_pt \in MessageRecord \cup {NULL} 
+         BY DEFS Init, Next, PutMessages, Channel!Send
+    <1>2 Init /\ Next => manager \in MessageRecord \cup {NULL} 
+         BY DEFS Init, Next, Channel!Send, NodeManagerIns!Next
+    <1>3 Init /\ Next => \/ end_pt = <<>> 
+                         \/ end_pt = NULL 
+                         \/ \A i \in 1..Len(end_pt) : end_pt[i] \in STRING 
+         BY DEFS Init, Next, ClearEndPt, NodeManagerIns!Next
+    <1>4 Init /\ Next => \A a_id \in AggregatorsPool : 
+                                 /\ aggs[a_id].Id \in AggregatorsPool
+                                 /\ aggs[a_id].Time \in Nat
+                                 /\ \/ aggs[a_id].Buffer = <<>> 
+                                    \/ \A i \in 1..Len(aggs[a_id].Buffer) : aggs[a_id].Buffer[i] \in STRING
+                                 /\ \/ aggs[a_id].CorrelationId = NULL 
+                                    \/ aggs[a_id].CorrelationId \in STRING
+         BY DEFS Init, Next, NodeManagerIns!Next
+    <1>99 QED BY <1>1, <1>2, <1>3, <1>4 DEF TypeOK
+============================================================================

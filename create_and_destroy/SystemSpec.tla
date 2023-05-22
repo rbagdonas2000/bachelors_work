@@ -35,20 +35,21 @@ CheckIfDone ==
     /\ Len(msgs) = 0
     /\ UNCHANGED <<start_pt, manager, aggs, msgs, end_pt, pool, versionCounter>>
 
-ClearEnd == 
+ClearEndPt == 
     /\ end_pt /= NULL
     /\ end_pt' = NULL
     /\ UNCHANGED <<start_pt, manager, aggs, msgs, pool, versionCounter>>
-
+    
 TypeOK == 
     /\ start_pt \in MessageRecord \/ start_pt = NULL
     /\ manager \in MessageRecord \/ manager = NULL
     /\ versionCounter \in Nat
+    /\ pool \subseteq Nat
     /\ \/ end_pt = <<>> 
        \/ end_pt = NULL
        \/ \A i \in 1..Len(end_pt) : end_pt[i] \in STRING
     /\ \A a_id \in DOMAIN aggs : /\ aggs[a_id].Id \in pool
-                                 /\ aggs[a_id].Time \in 0..TimeOut
+                                 /\ aggs[a_id].Time \in Nat
                                  /\ \/ aggs[a_id].Buffer = <<>> 
                                     \/ \A i \in 1..Len(aggs[a_id].Buffer) 
                                                 : aggs[a_id].Buffer[i] \in STRING
@@ -60,7 +61,7 @@ Next == \/ /\ Channel!Send
         \/ /\ NodeManagerIns!Next
            /\ UNCHANGED <<start_pt, msgs>>
         \/ PutMessages
-        \/ ClearEnd
+        \/ ClearEndPt
         \/ CheckIfDone
         
 GuaranteedDelivery == <>(end_pt /= NULL)

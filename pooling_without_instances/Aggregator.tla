@@ -13,7 +13,7 @@ ProcessMessage(id, item) ==
                 []OTHER -> aggs[a]]
     /\ UNCHANGED dst
 
-LOCAL Send(id) == 
+Send(id) == 
     /\ Len(aggs[id].Buffer) > 0
     /\ dst = NULL
     /\ dst' = aggs[id].Buffer
@@ -24,7 +24,7 @@ LOCAL Send(id) ==
                                         CorrelationId |-> NULL]
                 []OTHER -> aggs[a]]
 
-LOCAL IncrementTime(id) ==
+IncrementTime(id) ==
     /\ aggs' = [a \in DOMAIN aggs |-> 
                 CASE aggs[a].Id = id -> [Id |-> aggs[a].Id, 
                                         Buffer |-> aggs[a].Buffer, 
@@ -33,7 +33,7 @@ LOCAL IncrementTime(id) ==
                 []OTHER -> aggs[a]]
     /\ UNCHANGED dst
 
-LOCAL AggregateInner(id) == IF aggs[id].Time >= TimeOut
+AggregateInner(id) == IF aggs[id].Time >= TimeOut
                             THEN Send(id)
                             ELSE IncrementTime(id)
                            

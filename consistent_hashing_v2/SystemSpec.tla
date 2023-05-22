@@ -41,6 +41,13 @@ CheckIfDone ==
     /\ \A a \in DOMAIN aggs : (aggs[a].PrimaryMsgs = {} /\ aggs[a].SecondaryMsgs = {})
     /\ Len(msgs) = 0
     /\ UNCHANGED Vars
+    
+    
+    
+    
+    
+
+
 
 ClearEndPt == 
     /\ endpts[end_pt] /= NULL
@@ -72,13 +79,27 @@ TypeOK ==
 /\ \A id \in node_ids : 
         \A c \in 1..Len(endpts[id]) : endpts[id][c] \in MessageRecord \cup {NULL}
 /\ node_ids \subseteq Nat
-/\ \A id \in DOMAIN nodes : nodes[id] \in Nat
+/\ \A id \in DOMAIN nodes : nodes[id] \in Min..Max
 /\ \A id \in DOMAIN aggs : 
         /\ aggs[id].Id \in node_ids
-        /\ aggs[id].Hash \in Nat
+        /\ aggs[id].Hash \in Min..Max
         /\ aggs[id].NodeBefore \in node_ids
         /\ aggs[id].PrimaryMsgs \subseteq MessageRecord
         /\ aggs[id].SecondaryMsgs \subseteq MessageRecord
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Next == \/ TurnOffNode
         \/ TurnOnNode
