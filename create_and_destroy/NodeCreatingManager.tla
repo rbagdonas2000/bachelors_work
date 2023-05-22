@@ -1,4 +1,4 @@
------------------------------ MODULE NodeManager -----------------------------
+----------------------------- MODULE NodeCreatingManager -----------------------------
 EXTENDS Naturals, Sequences, FiniteSets
 CONSTANTS NULL, TimeOut, MaxInstances
 VARIABLES src, dst, aggs, pool, versionCounter

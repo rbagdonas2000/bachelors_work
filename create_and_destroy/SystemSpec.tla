@@ -14,7 +14,7 @@ PutMessages ==
 
 Channel == INSTANCE PointToPointChannel WITH src <- start_pt, dst <- manager
 
-NodeManagerIns == INSTANCE NodeManager WITH src <- manager, dst <- end_pt
+NodeManagerIns == INSTANCE NodeCreatingManager WITH src <- manager, dst <- end_pt
 
 Init == /\ start_pt = NULL
         /\ manager = NULL
@@ -38,7 +38,7 @@ CheckIfDone ==
 ClearEndPt == 
     /\ end_pt /= NULL
     /\ end_pt' = NULL
-    /\ UNCHANGED <<start_pt, manager, aggs, msgs, pool, versionCounter>>
+    /\ UNCHANGED <<start_pt, manager, aggs, msgs, pool, versionCounter>>  
     
 TypeOK == 
     /\ start_pt \in MessageRecord \/ start_pt = NULL
